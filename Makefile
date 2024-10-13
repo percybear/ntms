@@ -15,4 +15,5 @@ build-docker:
 
 # push_docker image to docker hub 
 push-docker:
-        docker push docker.io/pmoth/wal:$(TAG)
+	docker push docker.io/pmoth/ntms:$(TAG)
+
