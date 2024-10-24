@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "ntms.fullname" . }}
+  name: {{ include "ntms.fullname" . }}-service
   namespace: {{ .Release.Namespace }}
   labels: {{ include "ntms.labels" . | nindent 4 }}
 spec:
