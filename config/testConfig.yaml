@@ -1,0 +1,2 @@
+data-dir: /var/run/ntms/testdata
+bootstrap: true

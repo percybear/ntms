@@ -1,7 +1,7 @@
 # Default values for helm.
 image:
   repository: github.com/pmoth/ntms
-  tag: "latest"
+  tag: 0.1.0
   pullPolicy: IfNotPresent
 serfPort: 8401
 rpcPort: 8400
