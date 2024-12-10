@@ -8,7 +8,7 @@
 # 	go test -race ./...
 
 # build_docker image
-TAG ?= 0.1.0
+TAG ?= 0.1.1
 
 .PHONY: uninstall-helm
 uninstall-helm:
@@ -22,6 +22,14 @@ install-helm:
 build-go:
 	go build -o ./cmd/ntms/ntms -ldflags "-X main.version=$(TAG)" ./cmd/ntms/main.go
 
+.PHONY: clean-go
+clean-go:
+	rm ./cmd/ntms/ntms 
+
+.PHONY: run-ntms
+run-ntms:
+	./cmd/ntms/ntms --config-file=./config/testConfig.yaml
+
 .PHONY: run-go
 run-go:
 	go run -ldflags "-X main.version=$(TAG)" ./cmd/ntms/main.go
@@ -34,14 +42,6 @@ build-docker:
 .PHONY: push-docker
 push-docker:
 	docker push docker.io/pmoth/ntms:$(TAG)
-
-.PHONY: run-docker-httpd
-run-docker-httpd:
- # This works because the Dockerfile has already copied the config.yaml into the container
-	docker run -it --rm \
-	    -p 8401:8401 \
-		-p 8400:8400 \
-		-p 8080:8080 github.com/pmoth/ntms:$(TAG)
 
 .PHONY: run-docker
 run-docker:

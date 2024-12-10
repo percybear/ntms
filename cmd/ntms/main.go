@@ -2,6 +2,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -10,6 +11,10 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+)
+
+var (
+	version = "0.0.1"
 )
 
 // A cli maintains the state of the CLI.
@@ -35,64 +40,39 @@ type Config struct {
 }
 
 func main() {
+	fmt.Println("Version:\t", version)
+
 	cli := &cli{}
 
 	cmd := &cobra.Command{
-		Use:     "ntms",
-		PreRunE: cli.setupConfig,
-		RunE:    cli.run,
-		PostRunE: func(cmd *cobra.Command, args []string) error {
-			shutdown := make(chan os.Signal, 1)
-			signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
-			// signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
-			<-shutdown
-			return nil
-		},
+		Use:      "ntms",
+		PreRunE:  cli.preRunE,
+		RunE:     cli.runE,
+		PostRunE: cli.postRunE,
 	}
-	log.Println("before setup flags")
+
 	if err := setupFlags(cmd); err != nil {
 		log.Println("failed to initiate flags", err)
 		log.Fatal(err)
 	}
-	log.Println("after setup flags")
 
-	log.Println("before cmd execute")
 	if err := cmd.Execute(); err != nil {
 		log.Println("failed to execute command", err)
 		log.Fatal(err)
 	}
-	log.Println("after cmd execute")
 
-}
-
-// setupFlags registers flags for all commands, necessary too run the agent.
-func setupFlags(cmd *cobra.Command) error {
-	hostname, err := os.Hostname()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	cmd.Flags().String("config-file", "", "Path to config file.")
-
-	dataDir := path.Join(os.TempDir(), "ntms")
-	cmd.Flags().String("data-dir",
-		dataDir,
-		"Directory to store log and Raft data.")
-	cmd.Flags().String("node-name", hostname, "Unique server ID.")
-
-	cmd.Flags().String("bind-addr",
-		"127.0.0.1:8401",
-		"Address to bind Serf on.")
-	cmd.Flags().Bool("bootstrap", false, "Bootstrap the cluster.")
-
-	return viper.BindPFlags(cmd.Flags())
 }
 
 // setupConfig creates the agent configuration from the CLI flags.
-func (c *cli) setupConfig(cmd *cobra.Command, args []string) error {
+func (c *cli) preRunE(cmd *cobra.Command, args []string) error {
 	var err error
 
-	log.Println("start PreRunE ")
+	// log.Println("start preRunE")
+	// // viper.SetConfigFile(configFile)
+	// if err := setupFlags(cmd); err != nil {
+	// 	log.Println("failed to initiate flags", err)
+	// 	log.Fatal(err)
+	// }
 
 	// viper.SetConfigFile(configFile)
 	configFile, err := cmd.Flags().GetString("config-file")
@@ -114,18 +94,15 @@ func (c *cli) setupConfig(cmd *cobra.Command, args []string) error {
 	c.cfg.StartJoinAddrs = viper.GetStringSlice("start-join-addrs")
 	c.cfg.Bootstrap = viper.GetBool("bootstrap")
 
-	log.Println("end PreRunE ")
-
 	return nil
 }
 
 // run starts the agent, and terminates the agent when it detects either a SIGINT or SIGTERM.
 // SIGINT occurs when the user hits Ctrl+C.
 // SIGTERM occurs when the Docker container manager stops the container.
-func (c *cli) run(cmd *cobra.Command, args []string) error {
+func (c *cli) runE(cmd *cobra.Command, args []string) error {
 
 	log.Println("start RunE ")
-
 	log.Println("c.cfg.DataDir", c.cfg.DataDir)
 	log.Println("c.cfg.NodeName", c.cfg.NodeName)
 	log.Println("c.cfg.BindAddr", c.cfg.BindAddr)
@@ -133,8 +110,43 @@ func (c *cli) run(cmd *cobra.Command, args []string) error {
 		log.Println("Join Address", addr)
 	}
 	log.Println("c.cfg.Bootstrap", c.cfg.Bootstrap)
-
 	log.Println("end RunE ")
 
 	return nil
+}
+
+func (c *cli) postRunE(cmd *cobra.Command, args []string) error {
+
+	log.Println("start PostRunE ")
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+	// signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
+	<-shutdown
+	return nil
+}
+
+// setupFlags registers flags for all commands, necessary too run the agent.
+func setupFlags(cmd *cobra.Command) error {
+
+	log.Println("start setupFlags")
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	cmd.Flags().String("config-file", "", "Path to config file.")
+
+	dataDir := path.Join(os.TempDir(), "ntms")
+	cmd.Flags().String("data-dir",
+		dataDir,
+		"Directory to store log and Raft data.")
+	cmd.Flags().String("node-name", hostname, "Unique server ID.")
+
+	cmd.Flags().String("bind-addr",
+		"127.0.0.1:8401",
+		"Address to bind Serf on.")
+	cmd.Flags().Bool("bootstrap", false, "Bootstrap the cluster.")
+
+	return viper.BindPFlags(cmd.Flags())
 }

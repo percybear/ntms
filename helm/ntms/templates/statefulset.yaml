@@ -38,7 +38,7 @@ spec:
               cat > /var/run/ntms/config.yaml <<EOD
               data-dir: /var/run/ntms/data
               bootstrap: $([ $ID = 0 ] && echo true || echo false )
-              $([ $ID != 0 ] && echo 'start-join-addrs: "ntms-0.ntms.{{.Release.Namespace}}.svc.cluster.local:{{.Values.serfPort}}"')
+              $([ $ID = 0 ] && echo 'blank: true' || echo 'start-join-addrs: "ntms-0.ntms.{{.Release.Namespace}}.svc.cluster.local:{{.Values.serfPort}}"')
               EOD
           volumeMounts:
              - name: datadir
@@ -49,8 +49,9 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           # command: ["sh", "-c", "httpd -f -p 8080"]
           # command: ["sh", "-c", "cat /var/run/ntms/config.yaml > /dev/stdout && httpd -f -p 8080"]
-          args:
-            - --config-file=/var/run/ntms/config.yaml
+          command: ["sh", "-c", "cat /var/run/ntms/config.yaml > /dev/stdout && ntms --config-file=/var/run/ntms/config.yaml"]
+          # args:
+          #   - --config-file=/var/run/ntms/config.yaml
           ports:
             - containerPort: {{ .Values.rpcPort }}
               name: rpc
@@ -61,11 +62,12 @@ spec:
           volumeMounts:
             - name: datadir
               mountPath: /var/run/ntms
-    volumeClaimTemplates:
-      - metadata:
+  volumeClaimTemplates:
+    - metadata:
         name: datadir
-        spec:
-          accessModes: [ "ReadWriteOnce" ]
-          resources:
-            requests:
-              storage: {{ .Values.storage }}
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: {{ .Values.storageClassName }}
+        resources:
+          requests:
+            storage: {{ .Values.storage }}
